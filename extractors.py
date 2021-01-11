@@ -7,6 +7,8 @@ import config
 
 class ExtractionStrategy(ABC):
 
+    model = NotImplemented  # model to extract features
+
     @abstractmethod
     def extract(self, video_path: str) -> None:
         pass

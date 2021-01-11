@@ -3,8 +3,9 @@ import altair as alt
 import os
 
 from extractors import FeatureExtraction, SlowFastStrategy
-from clusterize import KMeansClusterStrategy
+from clusters import ClusterFactory
 from features import Features
+from positional_encoding import PositionalEncoding
 from video import Video
 from segment_video import ActionSegmentation
 import plots
@@ -40,125 +41,61 @@ if st.checkbox('Change directory'):
 
 if folder_path:
     video_path = file_selector(folder_path=folder_path)
-    features = Features(video_path)
+    feat_io = Features(video_path)
     video = Video(video_path)
     segmentator = ActionSegmentation(video_path)
+    positional_encoding = PositionalEncoding()
+    num_cluster_slider = 2
     metadata = video.metadata
 
     cluster = None
     c_labels = None
 
-    show_selected_video = st.sidebar.checkbox("Show selected video")
-    if show_selected_video:
-        st.video(video_path)
+    pos_enc = st.sidebar.checkbox("Use Positional Encoding")
+    cluster = st.selectbox(
+              'Select cluster strategy', ClusterFactory.values_list())
+    auto_cluster = st.checkbox("Automatic find the optimal number of clusters")
 
-    features_button = st.empty()
-
-    clusterize_button = st.empty()
+    cluster_selector = st.empty()
     num_cluster_slider = st.empty()
+    video_vis = st.empty()
+
     timeline_vis = st.empty()
     cluster_vis = st.empty()
 
     segment_selection = st.empty()
     segment_video = st.empty()
 
+    video_vis.video(video_path)
 
-    if features.has_features is False:
-        features_button = features_button.button("Extract features")
+    if feat_io.has_features is False:
+        with st.spinner("Extracting..."):
+            progress_bar = st.progress(0)
+            for i in feature_extractor.extract(video_path):
+                progress_bar.progress(i)
+            progress_bar.empty()
 
-        if features_button:
-            with st.spinner("Extracting..."):
-                progress_bar = st.progress(0)
-                for i in feature_extractor.extract(video_path):
-                    progress_bar.progress(i)
-                progress_bar.empty()
-    else:
+    if auto_cluster is False:
         num_cluster_slider = num_cluster_slider.slider(
-            "Select number of clusters", min_value=2, max_value=12)
+            "Select number of clusters", min_value=2, max_value=29)
 
-        cluster = KMeansClusterStrategy(k=num_cluster_slider,
-                                        path=video_path)
+    cluster = ClusterFactory.get(cluster)(n=num_cluster_slider)
 
-        with st.spinner("Clustering..."):
-            c_labels, df = cluster.clusterize(features.read())
-            # video.clusters_to_videos(c_labels)
+    with st.spinner("Clustering..."):
+        if pos_enc:
+            features = positional_encoding(feat_io.read())
+        else:
+            features = feat_io.read()
 
-        if c_labels is not None:
-            timeline_chart = plots.video_timeline(
-                utils.cluster_to_segment_bounds(df.cluster))
-            # timeline_vis.altair_chart(timeline_chart)
-            clusters_chart = plots.clusters(df)
-            # cluster_vis.altair_chart(clusters_chart)
-            st.altair_chart(alt.vconcat(timeline_chart, clusters_chart))
+        if auto_cluster:
+            c_labels = cluster.auto(features)
+        else:
+            c_labels = cluster.estimate(features)
 
+    if c_labels is not None:
+        df = cluster.df(features, c_labels)
+        timeline_chart = plots.video_timeline(
+            utils.cluster_to_segment_bounds(df.labels))
+        clusters_chart = plots.clusters(df)
 
-
-
-    # if video.is_segmented:
-    #     segment_header.header("Segments from clusters")
-    #     cluster = KMeansClusterStrategy(k=2,
-    #                                     path=video_path)
-    #     df = cluster.get_cluster()
-    #     chart = alt.Chart(df).mark_point().encode(alt.X('x:Q'),
-    #                                               alt.Y('y:Q'),
-    #                                               color=alt.Color("labels:N")
-    #                                               ).properties(width=640,
-    #                                                            height=480)
-    #     cluster_vis.altair_chart(chart)
-    #     timeline_vis.altair_chart(
-    #         plots.video_timeline(utils.cluster_to_segment_bounds(df.labels)))
-    #
-    #     segment_selected = segment_selection.selectbox('Select a segment',
-    #                                                    video.segments)
-    #     segment_video.video(os.path.join(video.segments_dir, segment_selected))
-    #
-    # elif features.has_features:
-    #     num_cluster_slider = st.slider("Select number of clusters",
-    #                                    min_value=2,
-    #                                    max_value=12)
-    #     clusterize_button = clusterize_button.button('Clusterize')
-    #     if clusterize_button:
-    #         cluster = KMeansClusterStrategy(k=num_cluster_slider,
-    #                                         path=video_path)
-    #
-    #         with st.spinner("Clustering..."):
-    #             c_labels, df = cluster.clusterize(features.read())
-    #             video.clusters_to_videos(c_labels)
-    #
-    #     if c_labels is not None:
-    #
-    #         segment_header.header("Segments from clusters")
-    #         segment_selected = segment_selection.selectbox('Select a segment',
-    #                                                        video.segments)
-    #         segment_video.video(os.path.join(video.segments_dir,
-    #                                          segment_selected))
-    #
-    #         chart = alt.Chart(df).mark_point().encode(
-    #             alt.X('x:Q'), alt.Y('y:Q'),
-    #             color=alt.Color("labels:N"),
-    #         ).properties(width=640, height=480)
-    #
-    #         cluster_vis.altair_chart(chart)
-    #
-    #         segs = utils.cluster_to_segment_bounds(df.labels)
-    #         timeline_plot = plots.video_timeline(segs)
-    #         timeline_vis.altair_chart(timeline_plot)
-    #
-    #
-    # else:
-    #     if st.button('Extract features'):
-    #         with st.spinner("Extracting..."):
-    #             progress_bar = st.progress(0)
-    #             for i in feature_extractor.extract(video_path):
-    #                 progress_bar.progress(i)
-    #             progress_bar.empty()
-    #         st.success("Features extracted! Now click on the segment button to segmentate your video.")
-    #
-    #         if segment_button.button('Segment'):
-    #             with st.spinner("Segmenting..."):
-    #                 segment = segmentator.segment()
-    #
-    #             segment_button.empty()
-    #             segment_header.header("Segments")
-    #             segment_selected = segment_selection.selectbox('Select a segment', video.segments)
-    #             segment_video.video(os.path.join(video.segments_dir, segment_selected))
+        st.altair_chart(alt.vconcat(timeline_chart, clusters_chart))

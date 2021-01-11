@@ -1,5 +1,7 @@
 from data_io import Npy
+
 import numpy as np
+from sklearn.preprocessing import scale
 
 
 class Features:
@@ -24,9 +26,11 @@ class Features:
         features_count = self.npy_io.count_npy_files(self.path)
         return features_count > 0
 
-    def read(self):
+    def read(self, preproc=True):
         feat = self.npy_io.read(self.path)
-        return feat.reshape((feat.shape[0] * feat.shape[1], feat.shape[2]))
+        feat = feat.reshape((feat.shape[0] * feat.shape[1], feat.shape[2]))
+
+        return scale(feat) if preproc else feat
 
     def write(self, ith: int, feature: np.array):
         fname = self._build_feat_fname(ith)
