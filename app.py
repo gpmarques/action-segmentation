@@ -52,6 +52,7 @@ if folder_path:
     c_labels = None
 
     pos_enc = st.sidebar.checkbox("Use Positional Encoding")
+    preproc = st.sidebar.checkbox("Standardize features (0 mean, 1 std)")
     cluster = st.selectbox(
               'Select cluster strategy', ClusterFactory.values_list())
     auto_cluster = st.checkbox("Automatic find the optimal number of clusters")
@@ -83,9 +84,9 @@ if folder_path:
 
     with st.spinner("Clustering..."):
         if pos_enc:
-            features = positional_encoding(feat_io.read())
+            features = positional_encoding(feat_io.read(preproc=preproc))
         else:
-            features = feat_io.read()
+            features = feat_io.read(preproc=preproc)
 
         if auto_cluster:
             c_labels = cluster.auto(features)

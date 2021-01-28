@@ -1,7 +1,7 @@
 from data_io import Npy
 
 import numpy as np
-from sklearn.preprocessing import scale
+from sklearn.preprocessing import StandardScaler
 
 
 class Features:
@@ -30,7 +30,7 @@ class Features:
         feat = self.npy_io.read(self.path)
         feat = feat.reshape((feat.shape[0] * feat.shape[1], feat.shape[2]))
 
-        return scale(feat) if preproc else feat
+        return StandardScaler().fit_transform(feat) if preproc else feat
 
     def write(self, ith: int, feature: np.array):
         fname = self._build_feat_fname(ith)

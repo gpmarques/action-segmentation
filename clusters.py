@@ -6,8 +6,8 @@ from enum import Enum
 
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from sklearn.cluster import KMeans
-from sklearn.mixture import GaussianMixture
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.metrics import silhouette_score
 
 import config
@@ -35,7 +35,7 @@ class ClusterStrategy(ABC):
 
     def df(self, data: np.ndarray, labels: np.ndarray) -> pd.DataFrame:
         """ Creates a dataframe by first reducing the dimensionality of the
-        features with PCA and them TSNE to visualisation
+        features with PCA and TSNE to enable visualisation
 
         args:
         features - 2d np.array of shape (num_segments, feature_len)
@@ -64,7 +64,7 @@ class ClusterStrategy(ABC):
         not_inc_iter = 0
         upper_n_cluster_lim = int(0.5 * data.shape[0] / config.SEGMENT_LENGTH)
 
-        for n in range(2, upper_n_cluster_lim):
+        for n in range(3, upper_n_cluster_lim):
             self.set_estimator(n)
             labels = self.estimate(data)
             sil_vals.append(silhouette_score(data, labels))
@@ -80,7 +80,7 @@ class ClusterStrategy(ABC):
 
             print(n, not_inc_iter, max_sil)
 
-            if not_inc_iter >= 3:
+            if not_inc_iter >= 2:
                 break
 
         self.estimator = max_sil_estimator
@@ -118,10 +118,49 @@ class GaussianMixtureClusterStrategy(ClusterStrategy):
                                          random_state=self.random_state)
 
 
+class BayesMixtureClusterStrategy(ClusterStrategy):
+
+    def __init__(self, n: int):
+        self.set_estimator(n)
+
+    def estimate(self, data: np.ndarray) -> np.ndarray:
+        self.estimator.fit(data)
+        return self.estimator.predict(data)
+
+    def set_estimator(self, n: int) -> None:
+        self.estimator = BayesianGaussianMixture(n_components=n,
+                                                 random_state=self.random_state)
+
+    def auto(self, data: np.ndarray) -> np.ndarray:
+        upper_clust_lim = int(data.shape[0] / 16 * 0.5)
+        self.set_estimator(upper_clust_lim)
+        return self.estimate(data)
+
+
+class AgglomerativeClusterStrategy(ClusterStrategy):
+
+    def __init__(self, n: int,
+                 linkage: str = "average", affinity: str = 'cosine'):
+        self._linkage = linkage
+        self._affinity = affinity
+        self.set_estimator(n)
+
+    def estimate(self, data: np.ndarray) -> np.ndarray:
+        self.estimator.fit(data)
+        return self.estimator.labels_
+
+    def set_estimator(self, n: int):
+        self.estimator = AgglomerativeClustering(n_clusters=n,
+                                                 linkage=self._linkage,
+                                                 affinity=self._affinity)
+
+
 class ClusterFactory(Enum):
 
     KMEANS = "KMeans"
     GAUSSIANMIXTURE = "Gaussian Mixture"
+    BAYESMIXTURE = "Bayesian Gaussian Mixture"
+    HIERARCHICAL = "Agglomerative with Average Linkage and Cosine Affinity"
 
     @staticmethod
     def values_list() -> list:
@@ -131,5 +170,7 @@ class ClusterFactory(Enum):
     def get(cluster_type: str) -> ClusterStrategy:
         return {
             ClusterFactory.KMEANS.value: KMeansClusterStrategy,
-            ClusterFactory.GAUSSIANMIXTURE.value: GaussianMixtureClusterStrategy
+            ClusterFactory.GAUSSIANMIXTURE.value: GaussianMixtureClusterStrategy,
+            ClusterFactory.BAYESMIXTURE.value: BayesMixtureClusterStrategy,
+            ClusterFactory.HIERARCHICAL.value: AgglomerativeClusterStrategy
         }[cluster_type]
