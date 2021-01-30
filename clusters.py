@@ -45,11 +45,12 @@ class ClusterStrategy(ABC):
         vis_feat_df - a pandas dataframe with 2 components representing the
                       features and another column with cluster labels
         """
-        pca = PCA(n_components=50)
-        red_data = pca.fit_transform(data)
+        if data.shape[0] > 50:
+            pca = PCA(n_components=50)
+            data = pca.fit_transform(data)
 
         tsne = TSNE(n_components=2, perplexity=50)
-        data_vis = tsne.fit_transform(red_data)
+        data_vis = tsne.fit_transform(data)
 
         vis_feat_df = pd.DataFrame(data_vis, columns=["x", "y"])
         vis_feat_df["labels"] = labels
@@ -160,7 +161,7 @@ class ClusterFactory(Enum):
     KMEANS = "KMeans"
     GAUSSIANMIXTURE = "Gaussian Mixture"
     BAYESMIXTURE = "Bayesian Gaussian Mixture"
-    HIERARCHICAL = "Agglomerative with Average Linkage and Cosine Affinity"
+    HIERARCHICAL = "Agglomerative"
 
     @staticmethod
     def values_list() -> list:
