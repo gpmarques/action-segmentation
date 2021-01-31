@@ -5,9 +5,9 @@ import streamlit as st
 import altair as alt
 
 from clusters import ClusterFactory
-from features import Features
+from video import Video
 from positional_encoding import PositionalEncoding
-from extractors import FeatureExtraction, SlowFastStrategy
+from extractors import ExtractorFactory
 
 import plots
 import utils
@@ -42,16 +42,6 @@ class VideoSegmentationCluster(Page):
             st.video(self.video_path)
             self.cluster_plot_component()
 
-    @staticmethod
-    @st.cache(allow_output_mutation=True)
-    def get_feature_extractor():
-        """ Static method that loads the Feature Extractor and stores it in a
-        cache to avoid reloading
-        """
-        feature_extractor = FeatureExtraction()
-        feature_extractor.extraction_strategy = SlowFastStrategy()
-        return feature_extractor
-
     def folder_selection_component(self):
         self.change_dir_checkbox = st.sidebar.checkbox("Change directory")
         if self.change_dir_checkbox:
@@ -71,15 +61,19 @@ class VideoSegmentationCluster(Page):
 
     def feature_extractor_component(self):
         """ UI file selection component """
-        self.feat_io = Features(self.video_path)
-        self.feature_extractor = VideoSegmentationCluster.get_feature_extractor()
+        st.sidebar.title("Pick a feature extractor")
 
-        if self.feat_io.has_features is False:
+        available_extraction_strategies = ExtractorFactory.values_list()
+        self.selected_extractor = st.sidebar.selectbox('Select an extraction strategy',
+                                                       available_extraction_strategies)
+
+        self.feature_extractor = ExtractorFactory.get(self.selected_extractor)()
+
+        self.video = Video(self.video_path, self.selected_extractor)
+
+        if self.video.features.has_features is False:
             with st.spinner("Extracting..."):
-                progress_bar = st.progress(0)
-                for i in self.feature_extractor.extract(self.video_path):
-                    progress_bar.progress(i)
-                progress_bar.empty()
+                self.feature_extractor.extract(self.video)
 
     def cluster_selection_component(self):
         """ UI cluster strategy component """
@@ -88,18 +82,21 @@ class VideoSegmentationCluster(Page):
         available_cluster_strategies = ClusterFactory.values_list()
         self.selected_cluster = st.sidebar.selectbox('Select a cluster strategy',
                                                      available_cluster_strategies)
-
-        self.num_cluster_slider = st.sidebar.slider("Select number of clusters",
-                                                    min_value=2, max_value=8)
         self.positional_encoding_checkbox = st.sidebar.checkbox("Use Positional Encoding")
         self.auto_cluster_checkbox = st.sidebar.checkbox("Automatic find the optimal number of clusters")
 
+        if self.auto_cluster_checkbox:
+            self.num_cluster_slider = 2
+        else:
+            self.num_cluster_slider = st.sidebar.slider("Select number of clusters",
+                                                        min_value=2, max_value=8)
+
         self.cluster = ClusterFactory.get(self.selected_cluster)(n=self.num_cluster_slider)
 
+        self.features = self.video.features()
+
         if self.positional_encoding_checkbox:
-            self.features = PositionalEncoding()(self.feat_io.read(preproc=False))
-        else:
-            self.features = self.feat_io.read(preproc=False)
+            self.features = PositionalEncoding()(self.features)
 
         if self.auto_cluster_checkbox:
             self.cluster_labels = self.cluster.auto(self.features)

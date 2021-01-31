@@ -7,10 +7,7 @@ from enum import Enum
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans, AgglomerativeClustering
-from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.metrics import silhouette_score
-
-import config
 
 
 class ClusterStrategy(ABC):
@@ -63,9 +60,8 @@ class ClusterStrategy(ABC):
         max_sil_estimator = None
         max_sil_labels = None
         not_inc_iter = 0
-        upper_n_cluster_lim = int(0.5 * data.shape[0] / config.SEGMENT_LENGTH)
 
-        for n in range(3, upper_n_cluster_lim):
+        for n in range(3, 8):
             self.set_estimator(n)
             labels = self.estimate(data)
             sil_vals.append(silhouette_score(data, labels))
@@ -104,40 +100,6 @@ class KMeansClusterStrategy(ClusterStrategy):
                                 random_state=self.random_state)
 
 
-class GaussianMixtureClusterStrategy(ClusterStrategy):
-
-    def __init__(self, n: int):
-        self.set_estimator(n)
-
-    def estimate(self, data: np.ndarray) -> np.ndarray:
-        self.estimator.fit(data)
-        labels = self.estimator.predict(data)
-        return labels
-
-    def set_estimator(self, n):
-        self.estimator = GaussianMixture(n_components=n,
-                                         random_state=self.random_state)
-
-
-class BayesMixtureClusterStrategy(ClusterStrategy):
-
-    def __init__(self, n: int):
-        self.set_estimator(n)
-
-    def estimate(self, data: np.ndarray) -> np.ndarray:
-        self.estimator.fit(data)
-        return self.estimator.predict(data)
-
-    def set_estimator(self, n: int) -> None:
-        self.estimator = BayesianGaussianMixture(n_components=n,
-                                                 random_state=self.random_state)
-
-    def auto(self, data: np.ndarray) -> np.ndarray:
-        upper_clust_lim = int(data.shape[0] / 16 * 0.5)
-        self.set_estimator(upper_clust_lim)
-        return self.estimate(data)
-
-
 class AgglomerativeClusterStrategy(ClusterStrategy):
 
     def __init__(self, n: int,
@@ -159,8 +121,6 @@ class AgglomerativeClusterStrategy(ClusterStrategy):
 class ClusterFactory(Enum):
 
     KMEANS = "KMeans"
-    GAUSSIANMIXTURE = "Gaussian Mixture"
-    BAYESMIXTURE = "Bayesian Gaussian Mixture"
     HIERARCHICAL = "Agglomerative"
 
     @staticmethod
@@ -171,7 +131,5 @@ class ClusterFactory(Enum):
     def get(cluster_type: str) -> ClusterStrategy:
         return {
             ClusterFactory.KMEANS.value: KMeansClusterStrategy,
-            ClusterFactory.GAUSSIANMIXTURE.value: GaussianMixtureClusterStrategy,
-            ClusterFactory.BAYESMIXTURE.value: BayesMixtureClusterStrategy,
             ClusterFactory.HIERARCHICAL.value: AgglomerativeClusterStrategy
         }[cluster_type]

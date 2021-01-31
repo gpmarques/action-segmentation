@@ -5,8 +5,7 @@ def cluster_to_segment_bounds(clusters: np.ndarray):
     """  Map clustered video segments into continuos segments of each cluster
 
     args:
-    data - label of each segment
-    labels - the unique labels
+    clusters - labels of each segment
 
     return:
     segs - list of dicts, where each key is a label and a tuple is the start
@@ -16,19 +15,17 @@ def cluster_to_segment_bounds(clusters: np.ndarray):
     segs = []
     for label in np.unique(clusters):
         idxs = np.where(clusters == label)[0]
-        curr = idxs[0]
-        last = None
-        step = 0
-        for idx in idxs:
-            if idx != curr + step:
-                segs.append({label: (curr, last)})
-                curr = idx
-                step = 1
-                last = None
-            else:
-                last = idx
-                step += 1
 
-        segs.append({label: (curr, idx)})
+        first_idx = idxs[0]
+        for i_idx, idx in enumerate(idxs):
+            if i_idx == 0:
+                continue
+
+            if idx != idxs[i_idx] + 1:
+                segs.append({label: (first_idx, idx + 1)})
+                first_idx = idx
+
+        segs.append({label: (first_idx, idx + 1)})
     segs.sort(key=lambda value: list(value.values())[0])
+    print(segs)
     return segs
