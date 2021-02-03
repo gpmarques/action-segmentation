@@ -1,4 +1,4 @@
-""" Features module
+""" features module
 
 This module implements all features related classes and methods
 
@@ -10,7 +10,7 @@ Features
     feature extractor
 
 """
-from data_io import Npy
+from npy import Npy
 import numpy as np
 import os
 
@@ -89,7 +89,7 @@ class Features:
     def write(self, ith: int, features: np.ndarray):
         """ Writes features with ith prefix
 
-        It first checks is the path where this features should be stored exist
+        It first checks if the path where this features should be stored exist,
         if it doesn't, creates it. Then creates the file name of the feature
         passed, which is of the form XXXX_features.npy.
 

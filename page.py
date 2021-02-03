@@ -53,7 +53,7 @@ class Page(ABC):
 
     def run(self):
         """ Method that calls the method _init_layout and starts a streamlit page """
-        self._init_layout()
+        self._init_page()
 
 
 class VideoSegmentationCluster(Page):

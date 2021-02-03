@@ -45,17 +45,19 @@ def cluster_to_segment_bounds(clusters: pd.Series):
         cont_start_idx = idxs[0]
         step = 0
         prev_idx = -1
+        print(label)
         for cur_idx in idxs:
             if cur_idx != cont_start_idx + step:
                 segs.append({label: (cont_start_idx, prev_idx + 1)})
-                step = 0
+                step = 1
                 prev_idx = cur_idx
                 cont_start_idx = cur_idx
             else:
                 step += 1
                 prev_idx = cur_idx
 
-        segs.append({label: (cont_start_idx, prev_idx + 1)})
+        if prev_idx + 1 < len(clusters) + 1:
+            segs.append({label: (cont_start_idx, prev_idx + 1)})
     return segs
 
 
