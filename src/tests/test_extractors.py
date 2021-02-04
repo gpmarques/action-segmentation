@@ -32,7 +32,7 @@ class TestFeatureExtractor(unittest.TestCase):
         self.assertIsInstance(features, np.ndarray)
         assert features.shape == (17, 2048)
 
-    def test_cluster_factory(self):
+    def test_extractor_factory(self):
         extractors = ExtractorFactory.values_list()
         assert isinstance(ExtractorFactory.get(extractors[0])(),
                           SlowFastStrategy)

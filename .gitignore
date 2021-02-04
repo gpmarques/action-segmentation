@@ -1,6 +1,7 @@
 data/*
-datasets/
+!data/RoadAccidents010_x264.mp4
 __pycache__/
 .ipynb_checkpoints/
 external/
 features/
+doc/class_uml.gaphor

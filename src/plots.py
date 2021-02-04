@@ -1,5 +1,5 @@
 """
-Module containing methods that creates charts
+Module containing methods that create charts
 
 Methods
 -------

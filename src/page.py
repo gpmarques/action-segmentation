@@ -115,7 +115,7 @@ class VideoSegmentationCluster(Page):
         its cluster labels
     """
 
-    folder_path = "./data"
+    folder_path = "../data"
     change_dir_checkbox = None
     selected_filename = None
     video_path = None
