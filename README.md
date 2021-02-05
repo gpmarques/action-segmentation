@@ -4,7 +4,7 @@ Projeto onde é possível visualizar a segmentação de cenas de vídeos por clu
 
 ## Instalação
 
-Você deve possuir no mínimo a versão de 3.7 de [python](https://www.python.org/downloads/).
+Você deve possuir no mínimo a versão 3.7 de [python](https://www.python.org/downloads/).
 
 Utilize o gerenciador de dependências [pip](https://pip.pypa.io/en/stable/) para instalar os pacotes necessários para rodar este programa.
 
