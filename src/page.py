@@ -115,7 +115,7 @@ class VideoSegmentationCluster(Page):
         its cluster labels
     """
 
-    folder_path = "../data"
+    folder_path = "./data"
     change_dir_checkbox = None
     selected_filename = None
     video_path = None
@@ -142,7 +142,11 @@ class VideoSegmentationCluster(Page):
             if self.video_path:
                 self._feature_extractor_component()
                 self._cluster_selection_component()
-                st.video(self.video_path)
+                if self.video_path.split(".")[-1] == 'avi':
+                    print(self.video_path)
+                    st.video(self.video_path, format='video/avi')
+                else:
+                    st.video(self.video_path)
                 self._cluster_plot_component()
 
     def _folder_selection_component(self):
@@ -169,7 +173,7 @@ class VideoSegmentationCluster(Page):
             filenames = os.listdir(self.folder_path)  # list all files
             filenames = [  # Filter only mp4 file names
                 filename for filename in filenames
-                if filename.split(".")[-1] in ["mp4"]]
+                if filename.split(".")[-1] in ["mp4", "avi"]]
 
             # if there are no video in the folder_path user should chose another
             if len(filenames) == 0:

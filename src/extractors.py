@@ -106,7 +106,7 @@ class ExtractionStrategy(ABC):
         clips_input = np.transpose(clips_input, (0, 2, 1, 3, 4))
         return clips_input
 
-    def extract(self, video: Video) -> None:
+    def extract(self, video: Video) -> np.ndarray:
         """
         This method extracts the features from a video object. First it retrieves
         all frames indexes according to the frame sampling method, then, for each
@@ -125,8 +125,9 @@ class ExtractionStrategy(ABC):
                                       clip_len=self.clip_len)
 
             features = self.model(nd.array(frames)).asnumpy()
-
             video.features.write(i, features)
+
+        # return features
 
 
 class SlowFastStrategy(ExtractionStrategy):
@@ -174,7 +175,7 @@ class SlowFastStrategy(ExtractionStrategy):
 
     def _sample_frames(self, video_len: int) -> list:
         """
-        This method creates a list of list of frame indexes, where each nested
+        This method creates a list of lists of frame indexes, where each nested
         list contains the frames indexes from a clip input. Each clip input list
         of indexes contains the indexes for the two pathways of the SlowFast model.
 
