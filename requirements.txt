@@ -25,7 +25,7 @@ cryptography==3.4.7
 cycler==0.10.0
 Cython==0.29.23
 dask==2021.3.0
-dataclasses==0.8
+dataclasses
 decorator==5.0.7
 decord==0.5.2
 defusedxml==0.7.1
