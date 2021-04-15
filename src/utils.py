@@ -14,8 +14,6 @@ positional_encoding(data: np.ndarray)
     Method that adds positional encoding to a numpy array
 """
 import numpy as np
-import math
-import torch
 import pandas as pd
 
 
@@ -76,14 +74,25 @@ def positional_encoding(data: np.ndarray) -> np.ndarray:
     np.ndarray
         The input + the positional encoding
     """
+    def get_sinusoid_encoding_table(length, d_model):
+        '''  '''
+
+        def cal_angle(position, hid_idx):
+            return position / np.power(10000, 2 * (hid_idx // 2) / d_model)
+
+        def get_posi_angle_vec(position):
+            return [cal_angle(position, hid_j) for hid_j in range(d_model)]
+
+        sinusoid_table = np.array([get_posi_angle_vec(pos_i) for pos_i in range(length)])
+
+        sinusoid_table[:, 0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
+        sinusoid_table[:, 1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
+
+        return sinusoid_table
+
     d_model = data.shape[1]
     length = data.shape[0]
 
-    pe = torch.zeros(length, d_model)
-    position = torch.arange(0, length).unsqueeze(1)
-    den_exp = torch.exp((torch.arange(0, d_model, 2, dtype=torch.float) *
-                        -(math.log(10000.0) / d_model)))
-    pe[:, 0::2] = torch.sin(position.float() * den_exp)
-    pe[:, 1::2] = torch.cos(position.float() * den_exp)
+    pe = get_sinusoid_encoding_table(length, d_model)
 
-    return data + pe.numpy()
+    return data + pe
