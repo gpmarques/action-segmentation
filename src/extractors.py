@@ -118,7 +118,7 @@ class ExtractionStrategy(ABC):
         video: Video
             Video object that is going to have its features extracted
         """
-        frames_id_list = self._sample_frames(len(video))
+        frames_id_list = self._sample_frames(len(video), video.fps)
 
         for i, ith_frames_id_list in enumerate(frames_id_list):
             frames = self._preprocess(video(ith_frames_id_list),
@@ -173,7 +173,7 @@ class SlowFastStrategy(ExtractionStrategy):
                                pretrained=True, feat_ext=True)
         self.clip_len = 48
 
-    def _sample_frames(self, video_len: int) -> list:
+    def _sample_frames(self, video_len: int, fps: float) -> list:
         """
         This method creates a list of lists of frame indexes, where each nested
         list contains the frames indexes from a clip input. Each clip input list
@@ -190,16 +190,26 @@ class SlowFastStrategy(ExtractionStrategy):
         frames_id_list: list
             list of lists with the frames indexes of each input clip
         """
-        n_batches = math.floor(video_len / 32)
 
-        frames_id_list = [list(range((i-1)*32, i*32, 1)) +  # fast pathway frames
-                          list(range((i-1)*32, i*32, 2))   # slow pathway frames
-                          for i in range(1, n_batches + 1)]
+        if fps < 30.0:
+            n_batches = math.floor(video_len / fps)
+            frames_id_list = [[dup_fid for f_id in range((i-1)*16, i*16, 1) for dup_fid in [f_id, f_id]] +  # fast pathway frames
+                              [dup_fid for f_id in range((i-1)*16, i*16, 2) for dup_fid in [f_id, f_id]]   # slow pathway frames
+                              for i in range(1, n_batches)]
+            if video_len % 16 > 0:  # make sure that all frames are used
+                rest_frame_id_list = [dup_fid for f_id in range(video_len - 16, video_len, 1) for dup_fid in [f_id, f_id]] +\
+                                     [dup_fid for f_id in range(video_len - 16, video_len, 2) for dup_fid in [f_id, f_id]]
+                frames_id_list.append(rest_frame_id_list)
+        else:
+            n_batches = math.floor(video_len / fps)
+            frames_id_list = [list(range((i-1)*32, i*32, 1)) +  # fast pathway frames
+                              list(range((i-1)*32, i*32, 2))   # slow pathway frames
+                              for i in range(1, n_batches)]
 
-        if video_len % 32 > 0:  # make sure that all frames are used
-            rest_frame_id_list = list(range(video_len - 32, video_len, 1)) +\
-                                 list(range(video_len - 32, video_len, 2))
-            frames_id_list.append(rest_frame_id_list)
+            if video_len % 32 > 0:  # make sure that all frames are used
+                rest_frame_id_list = list(range(video_len - 32, video_len, 1)) +\
+                                     list(range(video_len - 32, video_len, 2))
+                frames_id_list.append(rest_frame_id_list)
 
         return frames_id_list
 
@@ -248,7 +258,7 @@ class I3DStrategy(ExtractionStrategy):
                                pretrained=True, feat_ext=True)
         self.clip_len = 32
 
-    def _sample_frames(self, video_len: int) -> list:
+    def _sample_frames(self, video_len: int, fps: float) -> list:
         """
         This method creates a list of list of frame indexes, where each nested
         list contains the frames indexes from a clip input.
@@ -264,14 +274,27 @@ class I3DStrategy(ExtractionStrategy):
         frames_id_list: list
             list of lists with the frames indexes of each input clip
         """
-        n_batches = math.floor(video_len / 32)
 
-        frames_id_list = [list(range((i-1)*32, i*32, 1))
-                          for i in range(1, n_batches + 1)]
+        if fps < 30.0:
+            n_batches = math.floor(video_len / fps)
+            print(video_len, n_batches)
 
-        if video_len % 32 > 0:  # make sure that all frames are used
-            rest_frame_id_list = list(range(video_len - 32, video_len, 1))
-            frames_id_list.append(rest_frame_id_list)
+            frames_id_list = [[dup_fid for f_id in range((i-1)*16, i*16, 1) for dup_fid in [f_id, f_id]]
+                              for i in range(1, n_batches)]
+
+            if video_len % 16 > 0:  # make sure that all frames are used
+                rest_frame_id_list = [dup_fid for f_id in range(video_len - 16, video_len, 1) for dup_fid in [f_id, f_id]]
+                frames_id_list.append(rest_frame_id_list)
+
+        else:
+            n_batches = math.floor(video_len / fps)
+
+            frames_id_list = [list(range((i-1)*32, i*32, 1))
+                              for i in range(1, n_batches)]
+
+            if video_len % 32 > 0:  # make sure that all frames are used
+                rest_frame_id_list = list(range(video_len - 32, video_len, 1))
+                frames_id_list.append(rest_frame_id_list)
 
         return frames_id_list
 

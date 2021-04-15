@@ -9,6 +9,7 @@ Video
     Class that represents a video
 """
 import decord
+import cv2
 from features import Features
 import numpy as np
 
@@ -57,6 +58,24 @@ class Video(object):
     def name(self) -> str:
         """ Returns the name of the video file from its path """
         return self._path.split("/")[-1]
+
+    @property
+    def fps(self) -> float:
+        video = cv2.VideoCapture(self._path)
+
+        # Find OpenCV version
+        (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
+
+        if int(major_ver) < 3:
+            fps = video.get(cv2.cv.CV_CAP_PROP_FPS)
+        else:
+            fps = video.get(cv2.CAP_PROP_FPS)
+        video.release()
+        return fps
+
+    @property
+    def duration(self) -> float:
+        return len(self) / self.fps
 
     def __len__(self) -> int:
         """ Returns the number of frames of this video """

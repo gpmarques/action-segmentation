@@ -11,8 +11,8 @@ class S3:
         return boto3.resource(
             's3',
             'us-east-2',
-            aws_access_key_id=os.environ.get('aws_access_key_id'),
-            aws_secret_access_key=os.environ.get('aws_secret_access_key')
+            aws_access_key_id=os.environ.get("aws_access_key_id"),
+            aws_secret_access_key=os.environ.get("aws_secret_access_key")
         )
 
     def __get_client(self):
@@ -48,7 +48,11 @@ class S3:
         bucket = self._resource.Bucket(bucket_name)
         file_objs = bucket.objects.filter(Prefix=prefix).all()
 
-        file_names = [file_obj.key for file_obj in file_objs
+        file_keys = [".".join(file_obj.key.split(".")[:-2]) if len(file_obj.key.split(".")) == 3
+                     else file_obj.key
+                     for file_obj in file_objs]
+
+        file_names = [file_key for file_key in file_keys
                       if file_extension is None or
-                      file_obj.key.split(".")[-1] in file_extension]
+                      file_key.split(".")[-1] in file_extension]
         return file_names

@@ -7,7 +7,7 @@ import numpy as np
 class TestVideo(unittest.TestCase):
 
     def setUp(self):
-        self.video_path = "./tests/assets/RoadAccidents010_x264.mp4"
+        self.video_path = "./tests/assets/video/RoadAccidents010_x264.mp4"
         self.video = Video(self.video_path, "SlowFast")
 
     def test_video_len(self):
@@ -18,6 +18,12 @@ class TestVideo(unittest.TestCase):
         frames = self.video(idx)
         assert isinstance(frames, np.ndarray)
         assert frames.shape == (15, 240, 320, 3)
+
+    def test_video_fps(self):
+        assert self.video.fps == 30.0
+
+    def test_video_duration(self):
+        assert self.video.duration == 17.6
 
 
 if __name__ == '__main__':

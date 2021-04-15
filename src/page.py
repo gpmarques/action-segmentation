@@ -25,6 +25,7 @@ from video import Video
 from extractors import ExtractorFactory
 import plots
 from utils import cluster_to_segment_bounds, positional_encoding
+from s3 import S3
 
 
 class Page(ABC):
@@ -116,6 +117,7 @@ class VideoSegmentationCluster(Page):
     """
 
     folder_path = "./data"
+    bucket_name = "segmentation-videos"
     change_dir_checkbox = None
     selected_filename = None
     video_path = None
@@ -135,7 +137,6 @@ class VideoSegmentationCluster(Page):
         """ This method calls all component methods in the correct order that
         they appear in the UI and manages any logical dependency between them.
         """
-        self._folder_selection_component()
 
         if self.folder_path:
             self._file_selection_component()
@@ -149,45 +150,33 @@ class VideoSegmentationCluster(Page):
                     st.video(self.video_path)
                 self._cluster_plot_component()
 
-    def _folder_selection_component(self):
-        """
-        Method that creates the folder selection UI components and their logical
-        dependencies
-        """
-        # creates checkbox UI component
-        self.change_dir_checkbox = st.sidebar.checkbox("Change directory")
-
-        if self.change_dir_checkbox:  # if checkbox is ticked
-            # creates text_input UI component
-            self.folder_path = st.text_input("Enter the folder path where your videos are")
-
     def _file_selection_component(self):
         """
         Method that creates file selection UI components and their logical
         dependencies.
         """
-        # checking if folder_path is a valid directory
-        if os.path.isdir(self.folder_path) is False:
-            st.error("The path you entered is invalid")
-        else:
-            filenames = os.listdir(self.folder_path)  # list all files
-            filenames = [  # Filter only mp4 file names
-                filename for filename in filenames
-                if filename.split(".")[-1] in ["mp4", "avi"]]
+        self.s3 = S3()
+        filenames = self.s3.list_objects(bucket_name=self.bucket_name,
+                                         prefix="videos",
+                                         file_extension=['mp4', 'avi'])
 
-            # if there are no video in the folder_path user should chose another
-            if len(filenames) == 0:
-                st.error("There are no videos in this folder")
-            else:
-                # Creates a title UI component
-                st.sidebar.title("Pick your video")
+        filenames = [  # removing the videos path from the filename
+            filename.split("/")[-1] for filename in filenames]
+        print(filenames)
 
-                # creates the selection box component UI and stores the selected
-                # file
-                self.selected_filename = st.sidebar.selectbox('Select a file',
-                                                              filenames)
-                self.video_path = os.path.join(self.folder_path,
-                                               self.selected_filename)
+        # Creates a title UI component
+        st.sidebar.title("Pick your video")
+        # creates the selection box component UI and stores the selected
+        # file
+        self.selected_filename = st.sidebar.selectbox('Select a file',
+                                                      filenames)
+        self.video_path = os.path.join(self.folder_path,
+                                       self.selected_filename)
+
+        if os.path.exists(self.video_path) is False:
+            self.s3.download_object(self.bucket_name,
+                                    os.path.join('videos', self.selected_filename),
+                                    self.folder_path)
 
     def _feature_extractor_component(self):
         """
@@ -271,7 +260,8 @@ class VideoSegmentationCluster(Page):
         self.cluster_df = self.cluster.df(self.features, self.cluster_labels)
 
         # creates the video timeline chart and scatter chart
-        timeline_chart = plots.video_timeline(cluster_to_segment_bounds(self.cluster_df.labels))
+        timeline_chart = plots.video_timeline(
+            cluster_to_segment_bounds(self.cluster_df.labels))
         scatter_chart = plots.clusters(self.cluster_df)
 
         # creates the altair chart UI component
